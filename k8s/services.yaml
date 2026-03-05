@@ -1,0 +1,62 @@
+# ── API ClusterIP ─────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: dataspeak
+spec:
+  selector:
+    app: dataspeak-api
+  ports:
+    - name:       http
+      port:       80
+      targetPort: 8080
+      protocol:   TCP
+  type: ClusterIP
+
+---
+# ── Frontend ClusterIP ────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: dataspeak
+spec:
+  selector:
+    app: dataspeak-frontend
+  ports:
+    - name:       http
+      port:       80
+      targetPort: 80
+      protocol:   TCP
+  type: ClusterIP
+
+---
+# ── PostgreSQL ClusterIP ──────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: dataspeak
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port:       5432
+      targetPort: 5432
+  type: ClusterIP
+
+---
+# ── Redis ClusterIP ───────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: dataspeak
+spec:
+  selector:
+    app: redis
+  ports:
+    - port:       6379
+      targetPort: 6379
+  type: ClusterIP

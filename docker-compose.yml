@@ -1,0 +1,110 @@
+version: "3.9"
+
+# =============================================================================
+# DataSpeak – Local Development Stack
+# Usage:
+#   cp .env.example .env   # fill in secrets
+#   docker compose up --build
+# =============================================================================
+
+services:
+
+  # ── PostgreSQL (app database) ───────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: dataspeak-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       dataspeak
+      POSTGRES_USER:     dataspeak_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-localpassword}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test:     ["CMD-SHELL", "pg_isready -U dataspeak_user -d dataspeak"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+
+  # ── Redis (caching) ─────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: dataspeak-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test:     ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+
+  # ── .NET 8 API ──────────────────────────────────────────────────────────────
+  api:
+    build:
+      context:    ./backend
+      dockerfile: Dockerfile
+    container_name: dataspeak-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT:                   Development
+      ASPNETCORE_URLS:                          http://+:8080
+      ConnectionStrings__DefaultConnection:     "Host=postgres;Port=5432;Database=dataspeak;Username=dataspeak_user;Password=${DB_PASSWORD:-localpassword}"
+      ConnectionStrings__Redis:                 "redis:6379,abortConnect=false"
+      Jwt__SecretKey:                           ${JWT_SECRET_KEY:-dev-secret-key-min-32-chars-here}
+      Jwt__Issuer:                              dataspeak
+      Jwt__Audience:                            dataspeak-users
+      Jwt__AccessTokenExpiryMinutes:            "15"
+      Claude__ApiKey:                           ${CLAUDE_API_KEY}
+      Claude__Model:                            claude-opus-4-6
+      Claude__MaxTokens:                        "1024"
+      Encryption__MasterKey:                    ${ENCRYPTION_MASTER_KEY:-dev-master-key-change-in-prod}
+      AllowedOrigins__0:                        "http://localhost:4200"
+      AllowedOrigins__1:                        "http://localhost:80"
+    ports:
+      - "5000:8080"
+    volumes:
+      - api_logs:/app/logs
+    healthcheck:
+      test:     ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout:  10s
+      retries:  3
+      start_period: 30s
+
+  # ── Angular Frontend (Nginx) ─────────────────────────────────────────────────
+  frontend:
+    build:
+      context:    ./frontend
+      dockerfile: Dockerfile
+    container_name: dataspeak-frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "4200:80"
+    healthcheck:
+      test:     ["CMD-SHELL", "curl -f http://localhost/nginx-health || exit 1"]
+      interval: 30s
+      timeout:  5s
+      retries:  3
+
+volumes:
+  postgres_data:
+  redis_data:
+  api_logs:
+
+networks:
+  default:
+    name: dataspeak-network

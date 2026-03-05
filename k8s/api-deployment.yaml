@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dataspeak-api
+  namespace: dataspeak
+  labels:
+    app:     dataspeak-api
+    version: "1.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dataspeak-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge:       1
+  template:
+    metadata:
+      labels:
+        app: dataspeak-api
+    spec:
+      # ── Security context ───────────────────────────────────────────────────
+      securityContext:
+        runAsNonRoot: true
+        runAsUser:    1000
+        fsGroup:      1000
+
+      containers:
+        - name: api
+          image: your-acr.azurecr.io/dataspeak-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+
+          # ── Environment ─────────────────────────────────────────────────────
+          envFrom:
+            - configMapRef:
+                name: dataspeak-config
+          env:
+            - name: Jwt__SecretKey
+              valueFrom:
+                secretKeyRef:
+                  name: dataspeak-secrets
+                  key:  JWT_SECRET_KEY
+            - name: Claude__ApiKey
+              valueFrom:
+                secretKeyRef:
+                  name: dataspeak-secrets
+                  key:  CLAUDE_API_KEY
+            - name: Encryption__MasterKey
+              valueFrom:
+                secretKeyRef:
+                  name: dataspeak-secrets
+                  key:  ENCRYPTION_MASTER_KEY
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dataspeak-secrets
+                  key:  DB_PASSWORD
+
+          # ── Resource limits ──────────────────────────────────────────────────
+          resources:
+            requests:
+              cpu:    "250m"
+              memory: "256Mi"
+            limits:
+              cpu:    "1000m"
+              memory: "512Mi"
+
+          # ── Health checks ───────────────────────────────────────────────────
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds:       15
+            failureThreshold:    3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds:       10
+            failureThreshold:    3
+
+          # ── Volume mounts ────────────────────────────────────────────────────
+          volumeMounts:
+            - name: logs
+              mountPath: /app/logs
+
+      volumes:
+        - name: logs
+          emptyDir: {}
+
+      # ── Image pull secret for ACR ────────────────────────────────────────────
+      imagePullSecrets:
+        - name: acr-pull-secret

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dataspeak-config
+  namespace: dataspeak
+data:
+  ASPNETCORE_ENVIRONMENT:            "Production"
+  ASPNETCORE_URLS:                   "http://+:8080"
+  Jwt__Issuer:                       "dataspeak"
+  Jwt__Audience:                     "dataspeak-users"
+  Jwt__AccessTokenExpiryMinutes:     "15"
+  Claude__Model:                     "claude-opus-4-6"
+  Claude__MaxTokens:                 "1024"
+  ConnectionStrings__DefaultConnection: "Host=postgres-service;Port=5432;Database=dataspeak;Username=dataspeak_user;Password=$(DB_PASSWORD)"
+  ConnectionStrings__Redis:          "redis-service:6379,abortConnect=false"
+  AllowedOrigins__0:                 "https://app.dataspeak.io"

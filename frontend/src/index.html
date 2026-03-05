@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>DataSpeak – AI Data Chat</title>
+  <base href="/" />
+
+  <meta name="viewport"    content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Ask questions about your databases in plain English. Powered by AI." />
+  <meta name="theme-color" content="#6366f1" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="favicon.ico" />
+
+  <!-- Preconnect for Google Fonts (speeds up font loading) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Inter — UI font -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Material Icons (outlined variant also loaded for richer icon set) -->
+  <link
+    href="https://fonts.googleapis.com/icon?family=Material+Icons|Material+Icons+Outlined"
+    rel="stylesheet"
+  />
+
+  <!-- Roboto (Angular Material default typography) -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    /* Prevent flash of unstyled content */
+    html, body {
+      height:     100%;
+      margin:     0;
+      padding:    0;
+      background: #f1f5f9;
+    }
+
+    /* Splash screen shown before Angular boots */
+    #app-splash {
+      position:        fixed;
+      inset:           0;
+      display:         flex;
+      flex-direction:  column;
+      align-items:     center;
+      justify-content: center;
+      background:      #1e293b;
+      color:           white;
+      font-family:     Inter, sans-serif;
+      z-index:         9999;
+      transition:      opacity 0.3s ease;
+    }
+    #app-splash.hidden {
+      opacity:        0;
+      pointer-events: none;
+    }
+    #app-splash .logo {
+      font-size:   2rem;
+      font-weight: 700;
+      color:       #6366f1;
+      margin-bottom: 8px;
+    }
+    #app-splash .tagline {
+      color:       rgba(255,255,255,0.6);
+      font-size:   0.9rem;
+    }
+    #app-splash .spinner {
+      width:        32px;
+      height:       32px;
+      border:       3px solid rgba(99,102,241,0.3);
+      border-top:   3px solid #6366f1;
+      border-radius: 50%;
+      animation:    spin 0.8s linear infinite;
+      margin-top:   24px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+
+<body class="mat-typography">
+
+  <!-- Splash shown while Angular bundle loads -->
+  <div id="app-splash">
+    <div class="logo">⚡ DataSpeak</div>
+    <div class="tagline">AI-powered data conversations</div>
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Angular root -->
+  <app-root></app-root>
+
+  <script>
+    // Hide splash once Angular has rendered the root component
+    document.addEventListener('DOMContentLoaded', () => {
+      const splash = document.getElementById('app-splash');
+      const observer = new MutationObserver(() => {
+        const root = document.querySelector('app-root');
+        if (root && root.children.length > 0) {
+          splash.classList.add('hidden');
+          setTimeout(() => splash.remove(), 350);
+          observer.disconnect();
+        }
+      });
+      observer.observe(document.querySelector('app-root') || document.body, {
+        childList: true, subtree: true
+      });
+    });
+  </script>
+</body>
+</html>
